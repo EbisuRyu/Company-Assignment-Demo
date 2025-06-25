@@ -55,12 +55,15 @@ class SentimentAnalyzer:
             Dict: Analysis result containing sentiment and confidence
         """
         prompt = f"""
-        You are a professional sentiment analysis system.
-        Analyze the sentiment of the input text and classify it as positive, negative, or neutral.
-        Your response must be in valid JSON format with the following structure:
+        You are a strict sentiment analysis system.
+
+        Analyze the sentiment of the following text and return the result **only** as one of the three predefined categories: `"positive"`, `"negative"`, or `"neutral"`. You must not return any other value.
+
+        Your response must be a **valid JSON object** in the **exact** structure below, with no additional text, comments, or formatting:
+
         {{
-        "sentiment": "positive" | "negative" | "neutral",
-        "confidence": float (between 0 and 1, representing your confidence level)
+            "sentiment": "positive" | "negative" | "neutral",
+            "confidence": float  // a number between 0 and 1
         }}
 
         Text to analyze:

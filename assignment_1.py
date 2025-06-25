@@ -94,7 +94,7 @@ def apply_custom_css():
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
         .stApp {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: white;
             font-family: 'Inter', sans-serif;
         }
 

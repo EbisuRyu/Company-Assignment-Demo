@@ -36,12 +36,6 @@ class SentimentAnalyzer:
     """A professional sentiment analysis tool using Google's Gemini AI."""
     
     def __init__(self, api_key: str):
-        """
-        Initialize the sentiment analyzer with Gemini API.
-        
-        Args:
-            api_key (str): Google Gemini API key
-        """
         try:
             genai.configure(api_key=api_key)
             self.model = genai.GenerativeModel("gemini-1.5-flash")
@@ -50,32 +44,27 @@ class SentimentAnalyzer:
             logger.error(f"Failed to initialize Gemini model: {e}")
             raise
     
-    def analyze_sentiment(self, text: str) -> List[Dict]:
+    def analyze_sentiment(self, text: str) -> Dict:
         """
-        Analyze sentiment and extract products from text.
+        Analyze sentiment of the input text.
         
         Args:
             text (str): Input text to analyze
             
         Returns:
-            List[Dict]: Analysis results containing product and sentiment
+            Dict: Analysis result containing sentiment and confidence
         """
         prompt = f"""
-        You are a professional sentiment analysis system. Analyze the following text and extract all product names, 
-        then determine the sentiment (positive, negative, or neutral) for each product mentioned.
+        You are a professional sentiment analysis system.
+        Analyze the sentiment of the input text and classify it as positive, negative, or neutral.
+        Your response must be in valid JSON format with the following structure:
+        {{
+        "sentiment": "positive" | "negative" | "neutral",
+        "confidence": float (between 0 and 1, representing your confidence level)
+        }}
 
-        Text to analyze: "{text}"
-
-        Return your response as a valid JSON array in this exact format:
-        [
-            {{
-                "product": "product name",
-                "sentiment": "positive|negative|neutral",
-                "confidence": 0.95
-            }}
-        ]
-
-        If no specific products are mentioned, use "General" as the product name.
+        Text to analyze:
+        \"\"\"{text}\"\"\"
         """
         
         try:
@@ -89,10 +78,10 @@ class SentimentAnalyzer:
             return json.loads(response_text)
         except json.JSONDecodeError as e:
             logger.error(f"JSON parsing error: {e}")
-            return [{"product": "ERROR", "sentiment": "error", "confidence": 0.0}]
+            return {"sentiment": "error", "confidence": 0.0}
         except Exception as e:
-            logger.error(f"Analysis error: {e}")
-            return [{"product": "ERROR", "sentiment": str(e), "confidence": 0.0}]
+            logger.error(f"Analysis error: {type(e).__name__}: {e}")
+            return {"sentiment": f"Error ({type(e).__name__}): {e}", "confidence": 0.0}
 
 # -----------------------------------
 # UI Styling
@@ -102,16 +91,13 @@ def apply_custom_css():
     """Apply custom CSS styling for a modern, professional look."""
     st.markdown("""
         <style>
-        /* Import Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-        /* Global Styles */
         .stApp {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             font-family: 'Inter', sans-serif;
         }
 
-        /* Main Container */
         .main .block-container {
             padding: 2rem;
             background: rgba(255, 255, 255, 0.95);
@@ -121,7 +107,6 @@ def apply_custom_css():
             margin: 1rem;
         }
 
-        /* Header Styling */
         .main-header {
             text-align: center;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -141,14 +126,12 @@ def apply_custom_css():
             margin-bottom: 2rem;
         }
 
-        /* Sidebar Styling */
         .css-1d391kg {
             background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
-        /* Card Styling */
         .metric-card {
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             padding: 1.5rem;
@@ -164,7 +147,6 @@ def apply_custom_css():
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
         }
 
-        /* Button Styling */
         .stButton > button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -183,13 +165,11 @@ def apply_custom_css():
             background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
         }
 
-        /* Progress Bar */
         .stProgress > div > div > div > div {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 10px;
         }
 
-        /* File Uploader */
         .css-1cpxqw2 {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border: 2px dashed #667eea;
@@ -204,7 +184,6 @@ def apply_custom_css():
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
         }
 
-        /* Messages */
         .stSuccess, .stError, .stInfo {
             border-radius: 10px;
             padding: 1rem;
@@ -226,14 +205,12 @@ def apply_custom_css():
             border: 1px solid #17a2b8;
         }
 
-        /* Data Frame */
         .dataframe {
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         }
 
-        /* Animations */
         .rotating { animation: rotate 2s linear infinite; }
         @keyframes rotate {
             from { transform: rotate(0deg); }
@@ -246,7 +223,6 @@ def apply_custom_css():
             50% { opacity: .7; }
         }
 
-        /* Welcome Section */
         .welcome-card {
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             padding: 3rem;
@@ -287,7 +263,6 @@ def apply_custom_css():
             -webkit-text-fill-color: transparent;
         }
 
-        /* Loading Animation */
         .loading-container {
             display: flex;
             justify-content: center;
@@ -350,8 +325,9 @@ def create_welcome_section():
             </div>
         """, unsafe_allow_html=True)
 
-def create_beautiful_metrics(results_df: pd.DataFrame):
+def create_beautiful_metrics(results_df: pd.DataFrame, original_df: pd.DataFrame):
     """Display animated metric cards for analysis summary."""
+    df = original_df.copy() # Work on a copy
     cols = st.columns(4)
     
     total_entries = len(results_df)
@@ -361,11 +337,18 @@ def create_beautiful_metrics(results_df: pd.DataFrame):
         'negative': len(results_df[results_df['sentiment'] == 'negative'])
     }
     
+    # Ensure 'platform' column exists in df (the copy) for this function's scope
+    if 'platform' not in df.columns:
+        df['platform'] = 'Unknown' # Modify the copy
+
+    avg_rating = df['rating'].mean() if 'rating' in df.columns else 0
+    platform_count = len(df['platform'].unique()) if 'platform' in df.columns else 1
+    
     metrics = [
         ("📊", total_entries, "Total Reviews", "#667eea"),
         ("😊", counts['positive'], f"Positive ({counts['positive']/total_entries*100:.1f}%)" if total_entries else "Positive (0%)", "#28a745"),
-        ("😐", counts['neutral'], f"Neutral ({counts['neutral']/total_entries*100:.1f}%)" if total_entries else "Neutral (0%)", "#ffc107"),
-        ("😞", counts['negative'], f"Negative ({counts['negative']/total_entries*100:.1f}%)" if total_entries else "Negative (0%)", "#dc3545")
+        ("🌐", platform_count, "Platforms", "#17a2b8"),
+        ("⭐", f"{avg_rating:.1f}", "Avg. Rating", "#ffc107")
     ]
     
     for col, (icon, value, label, color) in zip(cols, metrics):
@@ -412,46 +395,92 @@ def create_beautiful_sidebar():
 # -----------------------------------
 
 def create_sentiment_chart(df: pd.DataFrame) -> go.Figure:
-    """Create an interactive pie chart for sentiment distribution."""
-    sentiment_counts = df['sentiment'].value_counts()
-    colors = ['#28a745', '#ffc107', '#dc3545', '#6c757d']
-    
-    fig = go.Figure(data=[
-        go.Pie(
-            labels=sentiment_counts.index, values=sentiment_counts.values, hole=0.4,
-            marker=dict(colors=colors, line=dict(color='#FFFFFF', width=3)),
-            textinfo='label+percent+value', textfont_size=14,
-            hovertemplate='<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}<extra></extra>'
-        )
-    ])
-    
-    fig.update_layout(
-        title={'text': "🎯 Sentiment Distribution Overview", 'x': 0.5, 'xanchor': 'center', 'font': {'size': 20, 'color': '#2c3e50'}},
-        font=dict(family="Inter, sans-serif", size=12),
-        showlegend=True, legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.05),
-        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=500
-    )
-    return fig
+    # Validate input DataFrame
+    if df.empty:
+        raise ValueError("Input DataFrame is empty")
+    required_columns = ['platform', 'sentiment']
+    if not all(col in df.columns for col in required_columns):
+        raise ValueError(f"DataFrame must contain columns: {required_columns}")
 
-def create_product_sentiment_chart(df: pd.DataFrame) -> go.Figure:
-    """Create a bar chart for product-wise sentiment analysis."""
-    product_sentiment = df.groupby(['product', 'sentiment']).size().reset_index(name='count')
+    # Calculate sentiment counts and percentages
+    sentiment_counts = (df.groupby(['platform', 'sentiment'])
+                       .size()
+                       .reset_index(name='count'))
     
-    fig = px.bar(
-        product_sentiment, x='product', y='count', color='sentiment', title="📦 Product-wise Sentiment Analysis",
-        color_discrete_map={'positive': '#28a745', 'negative': '#dc3545', 'neutral': '#ffc107', 'error': '#6c757d'},
-        text='count'
-    )
+    # Calculate total counts per platform
+    total_counts = sentiment_counts.groupby('platform')['count'].sum().reset_index(name='total')
     
-    fig.update_traces(texttemplate='%{text}', textposition='outside', textfont=dict(color='#34495e'))
+    # Merge to calculate percentages
+    sentiment_counts = sentiment_counts.merge(total_counts, on='platform')
+    sentiment_counts['percentage'] = (sentiment_counts['count'] / sentiment_counts['total'] * 100).round(2)
+
+    # Initialize figure
+    fig = go.Figure()
+
+    # Define color mapping
+    colors: Dict[str, str] = {
+        'positive': '#28a745',
+        'neutral': '#ffc107',
+        'negative': '#dc3545'
+    }
+
+    # Add bar traces for each sentiment
+    for sentiment in sentiment_counts['sentiment'].unique():
+        sent_data = sentiment_counts[sentiment_counts['sentiment'] == sentiment]
+        fig.add_trace(go.Bar(
+            x=sent_data['platform'],
+            y=sent_data['percentage'],
+            name=sentiment.capitalize(),
+            marker_color=colors.get(sentiment, '#808080'),
+            text=sent_data['percentage'].apply(lambda x: f'{x}%'),
+            textposition='auto',
+            hovertemplate=(
+                f'<b>%{{x}}</b><br>'
+                f'Sentiment: {sentiment.capitalize()}<br>'
+                f'Percentage: %{{y}}%<br>'
+                f'Count: %{{customdata}}<extra></extra>'
+            ),
+            customdata=sent_data['count']
+        ))
+
+    # Update layout
     fig.update_layout(
+        title=dict(
+            text="🎯 Sentiment Distribution by Platform",
+            x=0.5,
+            xanchor='center',
+            font=dict(size=20, color='#2c3e50')
+        ),
+        xaxis=dict(
+            title='Platform',
+            title_font=dict(color='#2c3e50'), 
+            tickfont=dict(color='#2c3e50'),
+            tickangle=45
+        ),
+        yaxis=dict(
+            title='Percentage (%)',
+            title_font=dict(color='#2c3e50'), 
+            tickfont=dict(color='#2c3e50'),
+            range=[0, 100],
+            gridcolor='rgba(200,200,200,0.3)'
+        ),
+        barmode='group',
         font=dict(family="Inter, sans-serif", size=12),
-        title={'font': {'size': 20, 'color': '#2c3e50'}, 'x': 0.5, 'xanchor': 'center'},
-        xaxis=dict(title="Products", title_font=dict(color='#2c3e50'), tickfont=dict(color='#2c3e50')),
-        yaxis=dict(title="Number of Reviews", title_font=dict(color='#2c3e50'), tickfont=dict(color='#2c3e50')),
-        legend=dict(title="Sentiment", title_font=dict(color='#2c3e50'), font=dict(color='#2c3e50')), 
-        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=500, showlegend=True
+        showlegend=True,
+        legend=dict(
+            orientation="v",
+            yanchor="middle",
+            y=0.5,
+            xanchor="left",
+            x=1.05,
+            title_font=dict(color='#2c3e50')
+        ),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        height=500,
+        margin=dict(b=150)  # Add margin for rotated x-axis labels
     )
+
     return fig
 
 def create_confidence_chart(df: pd.DataFrame) -> Optional[go.Figure]:
@@ -469,6 +498,31 @@ def create_confidence_chart(df: pd.DataFrame) -> Optional[go.Figure]:
     )
     return fig
 
+def create_rating_chart(original_df: pd.DataFrame) -> go.Figure:
+    """Create a bar chart for rating distribution by platform."""
+    df = original_df.copy()
+    if 'platform' not in df.columns:
+        df['platform'] = 'Unknown'  # Fallback platform name if column is missing
+    
+    rating_counts = df.groupby(['platform', 'rating']).size().reset_index(name='count')
+    
+    fig = px.bar(
+        rating_counts, x='platform', y='count', color='rating', title="⭐ Rating Distribution by Platform",
+        color_continuous_scale=px.colors.sequential.Viridis,
+        text='count'
+    )
+    
+    fig.update_traces(texttemplate='%{text}', textposition='outside', textfont=dict(color='#34495e'))
+    fig.update_layout(
+        font=dict(family="Inter, sans-serif", size=12),
+        title={'font': {'size': 20, 'color': '#2c3e50'}, 'x': 0.5, 'xanchor': 'center'},
+        xaxis=dict(title="Platform", title_font=dict(color='#2c3e50'), tickfont=dict(color='#2c3e50')),
+        yaxis=dict(title="Number of Reviews", title_font=dict(color='#2c3e50'), tickfont=dict(color='#2c3e50')),
+        legend=dict(title="Rating", title_font=dict(color='#2c3e50'), font=dict(color='#2c3e50')),
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=500, showlegend=True
+    )
+    return fig
+
 # -----------------------------------
 # Main Application
 # -----------------------------------
@@ -480,7 +534,13 @@ def main():
     create_animated_header()
     
     api_key, uploaded_file, batch_size, show_confidence, show_advanced_charts = create_beautiful_sidebar()
-    
+
+    # Initialize session state for processed DataFrame
+    if 'processed_df' not in st.session_state:
+        st.session_state.processed_df = None
+    if 'uploaded_file_hash' not in st.session_state:
+        st.session_state.uploaded_file_hash = None
+
     if not api_key:
         st.markdown("""
             <div style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); 
@@ -492,75 +552,110 @@ def main():
             </div>
         """, unsafe_allow_html=True)
         return
-    
-    if not uploaded_file:
-        create_welcome_section()
-        st.markdown("""
+
+    current_file_hash = uploaded_file.name + str(uploaded_file.size)
+
+    # Check if a new file has been uploaded or if no file is processed yet
+    if uploaded_file and current_file_hash != st.session_state.uploaded_file_hash:
+        st.session_state.processed_df = None # Clear previous data if new file
+        st.session_state.uploaded_file_hash = current_file_hash
+
+    if st.session_state.processed_df is None: # If no processed_df yet
+        if uploaded_file is None: # And no file uploaded, show welcome
+            create_welcome_section()
+            st.markdown("""
             <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); padding: 1rem; border-radius: 15px; margin: 1rem 0; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);">
                 <h3 style="color: #0c5460;">📋 How to Get Started</h3>
             </div>
         """, unsafe_allow_html=True)
         
-        cols = st.columns(3)
-        steps = [
-            ("1️⃣ Prepare Your Data", "Upload a CSV file with a column named 'review' containing your text data."),
-            ("2️⃣ Configure API", "Enter your Google Gemini API key in the sidebar configuration panel."),
-            ("3️⃣ Analyze & Export", "Click analyze to process your data and download beautiful reports.")
-        ]
-        
-        for col, (title, desc) in zip(cols, steps):
-            col.markdown(f"""
-                <div style="background: rgba(255, 255, 255, 0.7); padding: 1.5rem; border-radius: 10px;">
-                    <h4 style="color: #0c5460; margin-top: 0;">{title}</h4>
-                    <p style="color: #495057;">{desc}</p>
-                </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown("""
-            <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); padding: 1rem; border-radius: 15px; margin: 1rem 0; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);">
-                <h3 style="color: #0c5460;">📊 Sample Data Format</h3>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        sample_data = pd.DataFrame({
-            'review': [
-                '✨ Amazing product! Excellent quality and fast delivery.',
-                '🤔 The service was okay, nothing particularly special.',
-                '😞 Disappointing experience, would not recommend to others.'
+            cols = st.columns(3)
+            steps = [
+                ("1️⃣ Prepare Your Data", "Upload a CSV file with a column named 'review' containing your text data."),
+                ("2️⃣ Configure API", "Enter your Google Gemini API key in the sidebar configuration panel."),
+                ("3️⃣ Analyze & Export", "Click analyze to process your data and download beautiful reports.")
             ]
-        })
-        gb = GridOptionsBuilder.from_dataframe(sample_data)
-        gb.configure_pagination(paginationAutoPageSize=True)
-        gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, editable=False)
-        grid_options = gb.build()
-        AgGrid(sample_data, gridOptions=grid_options, theme="alpine", height=300, allow_unsafe_jscode=True)
-        return
-    
-    try:
-        df = pd.read_csv(uploaded_file)
-        if "review" not in df.columns:
-            st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); padding: 1.5rem; border-radius: 10px; border-left: 4px solid #dc3545;">
-                    <h4 style="color: #721c24; margin: 0;">❌ Column Error</h4>
-                    <p style="color: #721c24; margin: 0.5rem 0 0 0;">
-                        The uploaded file must contain a column named 'review'.<br>
-                        <strong>Available columns:</strong> {", ".join(df.columns)}
-                    </p>
+            
+            for col, (title, desc) in zip(cols, steps):
+                col.markdown(f"""
+                    <div style="background: rgba(255, 255, 255, 0.7); padding: 1.5rem; border-radius: 10px;">
+                        <h4 style="color: #0c5460; margin-top: 0;">{title}</h4>
+                        <p style="color: #495057;">{desc}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown("""
+                <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); padding: 1rem; border-radius: 15px; margin: 1rem 0; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);">
+                    <h3 style="color: #0c5460;">📊 Sample Data Format</h3>
                 </div>
             """, unsafe_allow_html=True)
-            st.stop()
-        
+            
+            sample_data = pd.DataFrame({
+                'review': [
+                    '✨ Amazing product! Excellent quality and fast delivery.',
+                    '🤔 The service was okay, nothing particularly special.',
+                    '😞 Disappointing experience, would not recommend to others.'
+                ],
+                'platform': ['Google Review', 'Facebook', 'Glassdoor'],
+                'rating': [5, 3, 1],
+                'date': ['2025-06-01', '2025-06-02', '2025-06-03']
+            })
+            gb = GridOptionsBuilder.from_dataframe(sample_data)
+            gb.configure_pagination(paginationAutoPageSize=True)
+            gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, editable=False)
+            grid_options = gb.build()
+            AgGrid(sample_data, gridOptions=grid_options, theme="alpine", height=300, allow_unsafe_jscode=True)
+            return # Exit main if no file and no processed data
+
+        # Process the newly uploaded file
+        try:
+            original_df = pd.read_csv(uploaded_file)
+            original_df.columns = original_df.columns.str.strip().str.lower() # Normalize column names
+            if 'platform' not in original_df.columns:
+                original_df['platform'] = 'Unknown'
+                st.warning("⚠️ 'platform' column missing. Using 'Unknown' as default.")
+            if "review" not in original_df.columns:
+                st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); padding: 1.5rem; border-radius: 10px; border-left: 4px solid #dc3545;">
+                        <h4 style="color: #721c24; margin: 0;">❌ Column Error</h4>
+                        <p style="color: #721c24; margin: 0.5rem 0 0 0;">
+                            The uploaded file must contain a column named 'review'.<br>
+                            <strong>Available columns:</strong> {", ".join(original_df.columns)}
+                        </p>
+                    </div>
+                """, unsafe_allow_html=True)
+                st.stop()
+            st.session_state.processed_df = original_df # Store for future reruns
+            # original_df is now set for this run too
+        except Exception as e:
+            st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); padding: 2rem; border-radius: 15px; border-left: 4px solid #dc3545;">
+                    <h4 style="color: #721c24; margin-bottom: 0;">💥 Processing Error</h4>
+                    <p style="color: #721c24; margin: 0.5rem 0 0 0;">An error occurred while processing your file: <code>{e}</code></p>
+                    <p style="color: #721c24; margin: 0.5rem;0 0; font-size: 0.9rem;">Please check your file format and try again.</p>
+                </div>
+            """, unsafe_allow_html=True)
+            logger.error(f"File processing error: {e}")
+            st.session_state.processed_df = None # Clear on error
+            return # Exit on error
+    
+    original_df = st.session_state.processed_df # Ensure original_df always points to the session state
+    if original_df is None: # Exit if no DataFrame is available
+        return
+
+    try:
         st.markdown("""
             <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); padding: 1rem; border-radius: 15px; margin: 1rem 0; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);">
-                <h3 style="color: #0c5460;">📄 Data Preview</h3>
+                <h3 style="color: #0c5460;">📋 Data Preview</h3>
             </div>
         """, unsafe_allow_html=True)
+        print(f"DEBUG: original_df columns at Data Preview: {original_df.columns.tolist()}")
         
         cols = st.columns(3)
         metrics = [
-            ("Total Reviews", len(df), "#667eea"),
-            ("Valid Reviews", df['review'].notna().sum(), "#28a745"),
-            ("Avg. Length", f"{df['review'].str.len().mean():.0f}", "#ffc107")
+            ("Total Reviews", len(original_df), "#667eea"),
+            ("Valid Reviews", original_df['review'].notna().sum(), "#28a745"),
+            ("Avg. Rating", f"{original_df['rating'].mean():.1f}" if 'rating' in original_df.columns else "N/A", "#ffc107")
         ]
         
         for col, (label, value, color) in zip(cols, metrics):
@@ -573,11 +668,11 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
         
-        gb = GridOptionsBuilder.from_dataframe(df.head(10))
+        gb = GridOptionsBuilder.from_dataframe(original_df.head(10))
         gb.configure_pagination(paginationAutoPageSize=True)
         gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, editable=False)
         grid_options = gb.build()
-        AgGrid(df.head(10), gridOptions=grid_options, theme="alpine", height=300, allow_unsafe_jscode=True)
+        AgGrid(original_df.head(10), gridOptions=grid_options, theme="alpine", height=300, allow_unsafe_jscode=True)
         
         _, col, _ = st.columns([1, 2, 1])
         with col:
@@ -603,10 +698,10 @@ def main():
                 progress_bar = st.progress(0)
                 status_container = st.empty()
                 results = []
-                total_reviews = len(df)
+                total_reviews = len(original_df)
                 start_time = time.time()
                 
-                for i, row in df.iterrows():
+                for i, row in original_df.iterrows():
                     progress = (i + 1) / total_reviews
                     progress_bar.progress(progress)
                     elapsed_time = time.time() - start_time
@@ -625,20 +720,24 @@ def main():
                     
                     if pd.isna(row['review']) or row['review'].strip() == '':
                         results.append({
-                            "original_review": row['review'], "product": "EMPTY", "sentiment": "neutral", "confidence": 0.0
+                            "review": row['review'],
+                            "platform": row.get('platform', 'Unknown'),
+                            "rating": row.get('rating', 0),
+                            "sentiment": "neutral",
+                            "confidence": 0.0
                         })
                         continue
                     
-                    analysis_results = analyzer.analyze_sentiment(row['review'])
-                    for item in analysis_results:
-                        result_entry = {
-                            "original_review": row['review'],
-                            "product": item.get('product', 'Unknown'),
-                            "sentiment": item.get('sentiment', 'neutral')
-                        }
-                        if show_confidence:
-                            result_entry["confidence"] = item.get('confidence', 0.0)
-                        results.append(result_entry)
+                    analysis_result = analyzer.analyze_sentiment(row['review'])
+                    result_entry = {
+                        "review": row['review'],
+                        "platform": row.get('platform', 'Unknown'),
+                        "rating": row.get('rating', 0),
+                        "sentiment": analysis_result.get('sentiment', 'neutral')
+                    }
+                    if show_confidence:
+                        result_entry["confidence"] = analysis_result.get('confidence', 0.0)
+                    results.append(result_entry)
                 
                 progress_bar.empty()
                 status_container.empty()
@@ -661,7 +760,7 @@ def main():
                         <p style="color: #6c757d;">Key insights from your data</p>
                     </div>
                 """, unsafe_allow_html=True)
-                create_beautiful_metrics(results_df)
+                create_beautiful_metrics(results_df, original_df)
                 
                 st.markdown("""
                     <div style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); text-align: center;">
@@ -704,17 +803,8 @@ def main():
                     st.plotly_chart(sentiment_fig, use_container_width=True)
                 
                 with cols[1]:
-                    if len(results_df['product'].unique()) > 1:
-                        product_fig = create_product_sentiment_chart(results_df)
-                        st.plotly_chart(product_fig, use_container_width=True)
-                    else:
-                        st.markdown("""
-                            <div style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); padding: 3rem; border-radius: 15px; text-align: center; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);">
-                                <div style="font-size: 3rem; margin-bottom: 1rem;">📦</div>
-                                <h4 style="color: #856404;">Single Product Category</h4>
-                                <p style="color: #856404;">All reviews relate to one product category.</p>
-                            </div>
-                        """, unsafe_allow_html=True)
+                    rating_fig = create_rating_chart(original_df)
+                    st.plotly_chart(rating_fig, use_container_width=True)
                 
                 if show_advanced_charts and show_confidence and 'confidence' in results_df.columns:
                     st.markdown("""
@@ -739,10 +829,10 @@ def main():
                         fig_scatter.update_layout(
                             font=dict(family="Inter, sans-serif", size=12),
                             title={'font': {'size': 20, 'color': '#2c3e50'}, 'x': 0.5, 'xanchor': 'center'},
-                            xaxis=dict(title="Confidence", title_font=dict(color='#2c3e50'), tickfont=dict(color='#2c3e50')),
-                            yaxis=dict(title="Sentiment", title_font=dict(color='#2c3e50'), tickfont=dict(color='#2c3e50')),
-                            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400,
-                            legend=dict(title="Sentiment", title_font=dict(color='#2c3e50'), font=dict(color='#2c3e50')), showlegend=True
+                            xaxis={'title': {'text': "Confidence", 'font': {'color': '#2c3e50'}}, 'tickfont': {'color': '#2c3e50'}},
+                            yaxis={'title': {'text': "Sentiment", 'font': {'color': '#2c3e50'}}, 'tickfont': {'color': '#2c3e50'}},
+                            legend={'title': {'text': "Sentiment", 'font': {'color': '#2c3e50'}}, 'font': {'color': '#2c3e50'}}, showlegend=True,
+                            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=400
                         )
                         st.plotly_chart(fig_scatter, use_container_width=True)
                 
@@ -770,7 +860,6 @@ def main():
                             'analysis_date': datetime.now().isoformat()
                         },
                         'sentiment_distribution': results_df['sentiment'].value_counts().to_dict(),
-                        'top_products': results_df['product'].value_counts().head(10).to_dict(),
                         'confidence_stats': {
                             'average_confidence': float(results_df['confidence'].mean()) if 'confidence' in results_df.columns else None,
                             'high_confidence_count': int((results_df['confidence'] >= 0.8).sum()) if 'confidence' in results_df.columns else None
@@ -802,7 +891,11 @@ def main():
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
                         )
                     except ImportError:
-                        st.info("📋 Install xlsxwriter for Excel export: pip install xlsxwriter")
+                        st.markdown("""
+                            <div style="background: linear-gradient(135deg, #d1ecf1 0%; #bee5eb 100%); padding: 1rem; border-radius: 10px; border-left: 1px solid #17a2b8;">
+                                <p style="color: #0c5460;">📋 Install xlsxwriter for Excel export: <code>pip install xlsxwriter</code></p>
+                            </div>
+                        """, unsafe_allow_html=True)
                 
                 st.markdown("""
                     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 15px; text-align: center; margin: 2rem 0; box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3);">
@@ -816,9 +909,9 @@ def main():
     except Exception as e:
         st.markdown(f"""
             <div style="background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); padding: 2rem; border-radius: 15px; border-left: 4px solid #dc3545;">
-                <h4 style="color: #721c24; margin: 0;">💥 Processing Error</h4>
+                <h4 style="color: #721c24; margin-bottom: 0;">💥 Processing Error</h4>
                 <p style="color: #721c24; margin: 0.5rem 0 0 0;">An error occurred while processing your file: <code>{e}</code></p>
-                <p style="color: #721c24; margin: 0.5rem 0 0 0; font-size: 0.9rem;">Please check your file format and try again.</p>
+                <p style="color: #721c24; margin: 0.5rem;0 0; font-size: 0.9rem;">Please check your file format and try again.</p>
             </div>
         """, unsafe_allow_html=True)
         logger.error(f"File processing error: {e}")

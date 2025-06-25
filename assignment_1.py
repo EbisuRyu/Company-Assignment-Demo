@@ -102,7 +102,6 @@ def apply_custom_css():
         }
 
         .main .block-container {
-            font-size: 14px;
             padding: 2rem;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
@@ -350,7 +349,7 @@ def create_beautiful_metrics(results_df: pd.DataFrame, original_df: pd.DataFrame
     
     metrics = [
         ("📊", total_entries, "Total Reviews", "#667eea"),
-        ("😊", counts['positive'], f"Positive ({counts['positive']/total_entries*100:.1f}%)" if total_entries else "Positive (0%)", "#28a745"),
+        ("😊", counts['positive'], "Positive", "#28a745"),
         ("🌐", platform_count, "Platforms", "#17a2b8"),
         ("⭐", f"{avg_rating:.1f}", "Avg. Rating", "#ffc107")
     ]
@@ -871,7 +870,7 @@ def main():
                     }
                     json_output = json.dumps(summary_stats, indent=2, ensure_ascii=False).encode('utf-8')
                     st.download_button(
-                        label="📋 Download JSON Summary", data=json_output,
+                        label="📋 Download Summary", data=json_output,
                         file_name=f"analysis_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
                         mime="application/json", use_container_width=True
                     )

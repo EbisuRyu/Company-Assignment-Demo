@@ -102,6 +102,7 @@ def apply_custom_css():
         }
 
         .main .block-container {
+            font-size: 14px;
             padding: 2rem;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;

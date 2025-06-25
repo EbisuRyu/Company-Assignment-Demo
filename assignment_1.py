@@ -469,15 +469,6 @@ def create_sentiment_chart(df: pd.DataFrame) -> go.Figure:
         ),
         barmode='group',
         font=dict(family="Inter, sans-serif", size=12),
-        showlegend=True,
-        legend=dict(
-            orientation="v",
-            yanchor="middle",
-            y=0.5,
-            xanchor="left",
-            x=1.05,
-            title_font=dict(color='#2c3e50')
-        ),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         height=500,
@@ -521,8 +512,7 @@ def create_rating_chart(original_df: pd.DataFrame) -> go.Figure:
         title={'font': {'size': 20, 'color': '#2c3e50'}, 'x': 0.5, 'xanchor': 'center'},
         xaxis=dict(title="Platform", title_font=dict(color='#2c3e50'), tickfont=dict(color='#2c3e50')),
         yaxis=dict(title="Number of Reviews", title_font=dict(color='#2c3e50'), tickfont=dict(color='#2c3e50')),
-        legend=dict(title="Rating", title_font=dict(color='#2c3e50'), font=dict(color='#2c3e50')),
-        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=500, showlegend=True
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=500
     )
     return fig
 

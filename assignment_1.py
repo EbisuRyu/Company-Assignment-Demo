@@ -100,6 +100,11 @@ def apply_custom_css():
             background: white;
             font-family: 'Inter', sans-serif;
         }
+        
+        .stTabs [role="tab"] {
+            color: black !important;
+            font-weight: 600;
+        }
 
         .main .block-container {
             padding: 2rem;
@@ -375,6 +380,9 @@ def create_beautiful_sidebar():
             </div>
         """, unsafe_allow_html=True)
         
+        st.markdown("### 📂 Page Selection")
+        selected_page = st.sidebar.selectbox("### Choose One Page", ["🏠 Home", "📊 Sentiment Analysis"])
+        
         st.markdown("### 🔑 API Configuration")
         api_key = st.text_input(
             "Google Gemini API Key", type="password",
@@ -391,7 +399,7 @@ def create_beautiful_sidebar():
         show_confidence = st.checkbox("Show Confidence Scores", value=True, help="📊 Display AI confidence levels")
         show_advanced_charts = st.checkbox("Advanced Visualizations", value=True, help="📈 Show additional charts and analytics")
         
-        return api_key, uploaded_file, batch_size, show_confidence, show_advanced_charts
+        return selected_page, api_key, uploaded_file, batch_size, show_confidence, show_advanced_charts
 
 # -----------------------------------
 # Visualization Functions
@@ -520,14 +528,7 @@ def create_rating_chart(original_df: pd.DataFrame) -> go.Figure:
 # Main Application
 # -----------------------------------
 
-def main():
-    """Main application function for sentiment analysis."""
-    configure_page()
-    apply_custom_css()
-    create_animated_header()
-    
-    api_key, uploaded_file, batch_size, show_confidence, show_advanced_charts = create_beautiful_sidebar()
-
+def sentiment_page(api_key, uploaded_file, batch_size, show_confidence, show_advanced_charts):
     # Initialize session state for processed DataFrame
     if 'processed_df' not in st.session_state:
         st.session_state.processed_df = None
@@ -908,6 +909,22 @@ def main():
             </div>
         """, unsafe_allow_html=True)
         logger.error(f"File processing error: {e}")
+
+def main():
+    """Main application function for sentiment analysis."""
+    
+    configure_page()
+    apply_custom_css()
+    create_animated_header()
+
+    selected_page, api_key, uploaded_file, batch_size, show_confidence, show_advanced_charts = create_beautiful_sidebar()
+    
+    if selected_page == "🏠 Home":
+        st.header("🏠 Home")
+
+    if selected_page == "📊 Sentiment Analysis":
+        sentiment_page(api_key, uploaded_file, batch_size, show_confidence, show_advanced_charts)
+        
 
 if __name__ == "__main__":
     main()

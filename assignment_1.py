@@ -444,7 +444,7 @@ def create_welcome_section():
         ("⚡", "Lightning Fast", "Process thousands of reviews in seconds with optimized batch processing."),
         ("🎯", "Highly Accurate", "Advanced AI models provide 95%+ accuracy with confidence scoring."),
         ("📊", "Beautiful Analytics", "Interactive charts and visualizations for deep insights."),
-        ("🔒", "Secure & Private", "Your data is processed securely with enterprise-grade security.")
+        ("🛡️", "Secure & Private", "Your data is processed securely with enterprise-grade security.")
     ]
     
     for col, (icon, title, desc) in zip(cols, features):

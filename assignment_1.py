@@ -528,6 +528,51 @@ def create_rating_chart(original_df: pd.DataFrame) -> go.Figure:
 # Main Application
 # -----------------------------------
 
+def home_page():
+    create_welcome_section()
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); padding: 1rem; border-radius: 15px; margin: 1rem 0; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);">
+        <h3 style="color: #0c5460;">📋 How to Get Started</h3>
+    </div>
+    """, unsafe_allow_html=True)
+
+    cols = st.columns(3)
+    steps = [
+        ("1️⃣ Prepare Your Data", "Upload a CSV file with a column named 'review' containing your text data."),
+        ("2️⃣ Configure API", "Enter your Google Gemini API key in the sidebar configuration panel."),
+        ("3️⃣ Analyze & Export", "Click analyze to process your data and download beautiful reports.")
+    ]
+    
+    for col, (title, desc) in zip(cols, steps):
+        col.markdown(f"""
+        <div style="background: rgba(255, 255, 255, 0.7); padding: 1.5rem; border-radius: 10px;">
+            <h4 style="color: #0c5460; margin-top: 0;">{title}</h4>
+            <p style="color: #495057;">{desc}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); padding: 1rem; border-radius: 15px; margin: 1rem 0; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);">
+        <h3 style="color: #0c5460;">📊 Sample Data Format</h3>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    sample_data = pd.DataFrame({
+        'review': [
+            '✨ Amazing product! Excellent quality and fast delivery.',
+            '🤔 The service was okay, nothing particularly special.',
+            '😞 Disappointing experience, would not recommend to others.'
+        ],
+        'platform': ['Google Review', 'Facebook', 'Glassdoor'],
+        'rating': [5, 3, 1],
+        'date': ['2025-06-01', '2025-06-02', '2025-06-03']
+    })
+    gb = GridOptionsBuilder.from_dataframe(sample_data)
+    gb.configure_pagination(paginationAutoPageSize=True)
+    gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, editable=False)
+    grid_options = gb.build()
+    AgGrid(sample_data, gridOptions=grid_options, theme="alpine", height=300, allow_unsafe_jscode=True)
+
 def sentiment_page(api_key, uploaded_file, batch_size, show_confidence, show_advanced_charts):
     # Initialize session state for processed DataFrame
     if 'processed_df' not in st.session_state:
@@ -546,8 +591,9 @@ def sentiment_page(api_key, uploaded_file, batch_size, show_confidence, show_adv
             </div>
         """, unsafe_allow_html=True)
         return
-
-    current_file_hash = uploaded_file.name + str(uploaded_file.size)
+    
+    if uploaded_file:
+        current_file_hash = uploaded_file.name + str(uploaded_file.size)
 
     # Check if a new file has been uploaded or if no file is processed yet
     if uploaded_file and current_file_hash != st.session_state.uploaded_file_hash:
@@ -555,51 +601,17 @@ def sentiment_page(api_key, uploaded_file, batch_size, show_confidence, show_adv
         st.session_state.uploaded_file_hash = current_file_hash
 
     if st.session_state.processed_df is None: # If no processed_df yet
-        if uploaded_file is None: # And no file uploaded, show welcome
-            create_welcome_section()
+        if uploaded_file is None:
             st.markdown("""
-            <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); padding: 1rem; border-radius: 15px; margin: 1rem 0; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);">
-                <h3 style="color: #0c5460;">📋 How to Get Started</h3>
-            </div>
-        """, unsafe_allow_html=True)
-        
-            cols = st.columns(3)
-            steps = [
-                ("1️⃣ Prepare Your Data", "Upload a CSV file with a column named 'review' containing your text data."),
-                ("2️⃣ Configure API", "Enter your Google Gemini API key in the sidebar configuration panel."),
-                ("3️⃣ Analyze & Export", "Click analyze to process your data and download beautiful reports.")
-            ]
-            
-            for col, (title, desc) in zip(cols, steps):
-                col.markdown(f"""
-                    <div style="background: rgba(255, 255, 255, 0.7); padding: 1.5rem; border-radius: 10px;">
-                        <h4 style="color: #0c5460; margin-top: 0;">{title}</h4>
-                        <p style="color: #495057;">{desc}</p>
-                    </div>
-                """, unsafe_allow_html=True)
-            
-            st.markdown("""
-                <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); padding: 1rem; border-radius: 15px; margin: 1rem 0; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);">
-                    <h3 style="color: #0c5460;">📊 Sample Data Format</h3>
+                <div style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+                            padding: 1rem; border-radius: 10px; border-left: 4px solid #ffc107; margin: 2rem 0;">
+                    <h4 style="color: #856404; margin: 0;">📂 No File Uploaded</h4>
+                    <p style="color: #856404; margin: 0.5rem 0 0 0;">
+                        Please upload a file to proceed. Use the file uploader above to get started.
+                    </p>
                 </div>
             """, unsafe_allow_html=True)
-            
-            sample_data = pd.DataFrame({
-                'review': [
-                    '✨ Amazing product! Excellent quality and fast delivery.',
-                    '🤔 The service was okay, nothing particularly special.',
-                    '😞 Disappointing experience, would not recommend to others.'
-                ],
-                'platform': ['Google Review', 'Facebook', 'Glassdoor'],
-                'rating': [5, 3, 1],
-                'date': ['2025-06-01', '2025-06-02', '2025-06-03']
-            })
-            gb = GridOptionsBuilder.from_dataframe(sample_data)
-            gb.configure_pagination(paginationAutoPageSize=True)
-            gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, editable=False)
-            grid_options = gb.build()
-            AgGrid(sample_data, gridOptions=grid_options, theme="alpine", height=300, allow_unsafe_jscode=True)
-            return # Exit main if no file and no processed data
+            return
 
         # Process the newly uploaded file
         try:
@@ -910,6 +922,7 @@ def sentiment_page(api_key, uploaded_file, batch_size, show_confidence, show_adv
         """, unsafe_allow_html=True)
         logger.error(f"File processing error: {e}")
 
+
 def main():
     """Main application function for sentiment analysis."""
     
@@ -920,7 +933,7 @@ def main():
     selected_page, api_key, uploaded_file, batch_size, show_confidence, show_advanced_charts = create_beautiful_sidebar()
     
     if selected_page == "🏠 Home":
-        st.header("🏠 Home")
+        home_page()
 
     if selected_page == "📊 Sentiment Analysis":
         sentiment_page(api_key, uploaded_file, batch_size, show_confidence, show_advanced_charts)

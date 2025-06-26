@@ -8,3 +8,5 @@ streamlit-aggrid
 tqdm
 xlsxwriter
 seaborn
+more-itertools
+streamlit-tags
